@@ -219,29 +219,12 @@ pipeline {
         always {
             node('built-in') { 
                 echo 'Fin del Pipeline. Recopilando todos los reportes...'
-                sh 'mkdir -p reports' 
-                
+                sh 'mkdir -p reports'
 
-                try {
-                    unstash name: 'unitTestReportsSeq'
-                } catch (e) {
-                    echo "Advertencia: No se pudo recuperar el stash 'unitTestReportsSeq'. Razón: ${e.getMessage()}"
-                }
-                try {
-                    unstash name: 'serviceTestReportsSeq'
-                } catch (e) {
-                    echo "Advertencia: No se pudo recuperar el stash 'serviceTestReportsSeq'. Razón: ${e.getMessage()}"
-                }
-                try {
-                    unstash name: 'unitTestReportsPar'
-                } catch (e) {
-                    echo "Advertencia: No se pudo recuperar el stash 'unitTestReportsPar'. Razón: ${e.getMessage()}"
-                }
-                try {
-                    unstash name: 'serviceTestReportsPar'
-                } catch (e) {
-                    echo "Advertencia: No se pudo recuperar el stash 'serviceTestReportsPar'. Razón: ${e.getMessage()}"
-                }
+                unstash name: 'unitTestReportsSeq'
+                unstash name: 'serviceTestReportsSeq'
+                unstash name: 'unitTestReportsPar'
+                unstash name: 'serviceTestReportsPar'
                 
                 archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
             }
