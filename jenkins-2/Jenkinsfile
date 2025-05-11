@@ -129,7 +129,7 @@ pipeline {
                             cleanWs()
                             unstash name: 'sourceAndConfig'
                             sh 'ls -la'
-                            def DOCKER_PROJECT_NAME = "mi_proyecto_ci"
+                            def DOCKER_PROJECT_NAME = "p-${UUID.randomUUID().toString()}"
                             try {
                                 echo 'Creando directorio para reportes (si no existe)...'
                                 sh 'mkdir -p reports'
@@ -171,7 +171,7 @@ pipeline {
                             echo 'Iniciando pruebas de servicio en paralelo'
                             def FLASK_HOST_PORT_PAR = ''
                             def WIREMOCK_HOST_PORT_PAR = ''
-                            def DOCKER_PROJECT_NAME = "mi_proyecto_ci"
+                            def DOCKER_PROJECT_NAME = "p-${UUID.randomUUID().toString()}"
                             try {
                                 echo 'Limpiando entorno Docker en caso de ser necesario...'
                                 sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
