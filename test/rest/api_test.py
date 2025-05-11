@@ -5,9 +5,9 @@ from urllib.request import urlopen
 
 import pytest
 
-BASE_URL = "http://localhost:5000"
-BASE_URL_MOCK = "http://localhost:9090"
-DEFAULT_TIMEOUT = 2  # in secs
+BASE_URL = os.getenv('FLASK_TEST_URL')
+BASE_URL_MOCK = os.getenv('WIREMOCK_TEST_URL')
+DEFAULT_TIMEOUT = 5  # in secs
 
 @pytest.mark.api
 class TestApi(unittest.TestCase):
