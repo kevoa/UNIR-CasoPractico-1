@@ -1,0 +1,13 @@
+# Dockerfile.agent (Añadiendo jenkins al grupo root)
+FROM jenkins/ssh-agent:jdk17
+
+USER root
+
+# Paso 1: Actualizar e instalar Python, pytest y prerrequisitos generales
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        python3 \
+        python3-pip \
+        python3-pytest 
+
+RUN usermod -aG root jenkins

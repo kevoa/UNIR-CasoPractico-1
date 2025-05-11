@@ -1,0 +1,95 @@
+services:
+  # Servicio para python 
+  python-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000" 
+    # volumes:
+    #   - .:/usr/src/app
+    networks:
+      - devops_network
+    depends_on:
+      - wiremock_service
+    # tty: true 
+  
+  # Servicio para wiremock
+  wiremock_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.wiremock
+    ports:
+      - "8080"
+    # volumes:
+    #   - ./test/wiremock/mappings:/home/wiremock/mappings
+    command: ["--verbose"]
+    networks:
+      - devops_network
+  
+  # Servicio de Jenkins
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    ports:
+      - 8082:8080
+      - 50000:50000
+    container_name: jenkins
+    # privileged: true
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devops_network
+
+  # Servicio para agentes en jenkins
+  agent-pipeline-jenkins-1:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+    container_name: agent-jenkins-1-general
+    # privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock 
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKIw5RZOdVuaorUL7zdJB6SaZe3s5fkRJaVjq6NODJje
+    networks:
+      - devops_network
+
+  agent-jenkins-2-test-unit:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent-unit
+    container_name: agent-jenkins-2-test-unit
+    # privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock 
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKIw5RZOdVuaorUL7zdJB6SaZe3s5fkRJaVjq6NODJje
+    networks:
+      - devops_network
+
+  agent-jenkins-2-test-rest:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent-rest
+    container_name: agent-jenkins-2-test-rest
+    # privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock 
+    expose:
+      - 22
+    environment:
+      - JENKINS_AGENT_SSH_PUBKEY=ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKIw5RZOdVuaorUL7zdJB6SaZe3s5fkRJaVjq6NODJje
+    networks:
+      - devops_network
+
+networks:
+  devops_network:
+    driver: bridge
+
+volumes:
+  jenkins_data: {}
