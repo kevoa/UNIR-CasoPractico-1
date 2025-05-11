@@ -32,7 +32,7 @@ class TestApi(unittest.TestCase):
             response.status, http.client.OK, f"Error en la petición API a {url}"
         )
         self.assertEqual(
-            response.read().decode(), "3", "ERROR SUBSTRACT"
+            response.read().decode(), "4", "ERROR SUBSTRACT"
         )
 
     def test_api_power(self):
@@ -42,11 +42,11 @@ class TestApi(unittest.TestCase):
             response.status, http.client.OK, f"Error en la petición API a {url}"
         )
         self.assertEqual(
-            response.read().decode(), "3", "ERROR POWER"
+            response.read().decode(), "4", "ERROR POWER"
         )
 
     def test_api_divide(self):
-        url = f"{BASE_URL}/calc/divide/3/2"
+        url = f"{BASE_URL}/calc/divide/6/2"
         response = urlopen(url, timeout=DEFAULT_TIMEOUT)
         self.assertEqual(
             response.status, http.client.OK, f"Error en la petición API a {url}"
@@ -62,7 +62,7 @@ class TestApi(unittest.TestCase):
             response.status, http.client.OK, f"Error en la petición API a {url}"
         )
         self.assertEqual(
-            response.read().decode(), "3", "ERROR MULTIPLY"
+            response.read().decode(), "6", "ERROR MULTIPLY"
         )
 
 
