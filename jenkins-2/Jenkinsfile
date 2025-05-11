@@ -120,22 +120,37 @@ pipeline {
                     agent {
                         label 'agent-ssh-jenkins-2-test-rest' // Usamos el mismo agente en las dos stages
                     }
-                    steps {
-                        sh 'whoami'
-                        sh 'hostname'
-                        echo "Workspace: ${env.WORKSPACE}"
-                        echo 'Preparando workspace para pruebas unitarias en paralelo...'
-                        cleanWs()
-                        unstash name: 'sourceAndConfig'
-                        sh 'ls -la'
-                        
-                        echo 'Creando directorio para reportes (si no existe)...'
-                        sh 'mkdir -p reports'
-                        echo 'Realizando pruebas unitarias en paralelo...'
-                        sh 'python3 -m pytest test/unit --junitxml=reports/TEST-unit-parallel.xml' 
-                        
-                        echo 'Pruebas unitarias realizadas con exito...'
-                        echo 'Guardando reportes de pruebas unitarias en paralelo...'
+                    steps { 
+                        script {
+                            sh 'whoami'
+                            sh 'hostname'
+                            echo "Workspace: ${env.WORKSPACE}"
+                            echo 'Preparando workspace para pruebas unitarias en paralelo...'
+                            cleanWs()
+                            unstash name: 'sourceAndConfig'
+                            sh 'ls -la'
+                            def DOCKER_PROJECT_NAME = "mi_proyecto_ci"
+                            try {
+                                echo 'Creando directorio para reportes (si no existe)...'
+                                sh 'mkdir -p reports'
+
+                                echo 'Limpiando entorno Docker en caso de ser necesario...'
+                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+
+                                echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
+                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service'
+
+                                echo 'Realizando pruebas unitarias en paralelo...'
+                                sh 'python3 -m pytest test/unit --junitxml=reports/TEST-unit-parallel.xml' 
+                                
+                                echo 'Pruebas unitarias realizadas con exito...'
+                                echo 'Guardando reportes de pruebas unitarias en paralelo...'
+                            } finally {
+                                echo 'Deteniendo y eliminando contenedores de prueba (service parallel) para un workspace limpio...'
+                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+                            }
+                        }
+
                         stash name: 'unitTestReportsPar', includes: 'reports/TEST-unit-parallel.xml', allowEmpty: true
                     }
                 }
@@ -156,6 +171,7 @@ pipeline {
                             echo 'Iniciando pruebas de servicio en paralelo'
                             def FLASK_HOST_PORT_PAR = ''
                             def WIREMOCK_HOST_PORT_PAR = ''
+                            def DOCKER_PROJECT_NAME = "mi_proyecto_ci"
                             try {
                                 echo 'Limpiando entorno Docker en caso de ser necesario...'
                                 sh 'docker compose -f docker-compose.yml down --volumes --remove-orphans || true'
