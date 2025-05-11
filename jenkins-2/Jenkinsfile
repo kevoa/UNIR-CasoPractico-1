@@ -58,32 +58,34 @@ pipeline {
                     cleanWs()
                     unstash name: 'sourceAndConfig'
                     sh 'ls -la' 
-                                     
+                                        
                     echo 'Iniciando pruebas de servicio secuencial...'
                     def FLASK_HOST_PORT_SEQ = ''
                     def WIREMOCK_HOST_PORT_SEQ = ''
+                    // Usar un nombre de proyecto único también para la etapa secuencial por consistencia
+                    def DOCKER_PROJECT_NAME_SEQ = "project-seq-${env.BUILD_ID}"
                     try {
-                        echo 'Limpiando entorno Docker en caso de ser necesario...'
-                        sh 'docker compose -f docker-compose.yml down --volumes --remove-orphans || true'
+                        echo "Limpiando entorno Docker para proyecto secuencial: ${DOCKER_PROJECT_NAME_SEQ}"
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml down --volumes --remove-orphans || true"
 
                         sh 'echo "DEBUG: Verificando directorio de mappings de WireMock en el workspace (debe estar por el unstash)..."'
                         sh 'ls -la ./test/wiremock/mappings/'
                         sh 'echo "DEBUG: Contenido de ./test/wiremock/mappings/sqrt64.json:"'
                         sh 'cat ./test/wiremock/mappings/sqrt64.json || echo "ERROR: sqrt64.json no encontrado"'
                         
-                        echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
-                        sh 'docker compose -f docker-compose.yml up -d --build python-app wiremock_service'
+                        echo "Construyendo entorno para proyecto secuencial: ${DOCKER_PROJECT_NAME_SEQ}"
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml up -d --build python-app wiremock_service"
 
                         echo 'Esperando a que los servicios se inicien...'
-                        sh 'docker compose -f docker-compose.yml logs python-app' 
-                        sh 'docker compose -f docker-compose.yml exec python-app env'
-                        sh 'docker compose -f docker-compose.yml logs wiremock_service'
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml logs python-app" 
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml exec python-app env"
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml logs wiremock_service"
 
-                        FLASK_HOST_PORT_SEQ = sh(script: 'docker compose -f docker-compose.yml port python-app 5000', returnStdout: true).trim().split(':')[1]
-                        WIREMOCK_HOST_PORT_SEQ = sh(script: 'docker compose -f docker-compose.yml port wiremock_service 8080', returnStdout: true).trim().split(':')[1]
+                        FLASK_HOST_PORT_SEQ = sh(script: "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml port python-app 5000", returnStdout: true).trim().split(':')[1]
+                        WIREMOCK_HOST_PORT_SEQ = sh(script: "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml port wiremock_service 8080", returnStdout: true).trim().split(':')[1]
 
-                        echo "DEBUG: FLASK_HOST_PORT_SEQ detectado: ${FLASK_HOST_PORT_SEQ}"
-                        echo "DEBUG: WIREMOCK_HOST_PORT_SEQ detectado: ${WIREMOCK_HOST_PORT_SEQ}"
+                        echo "DEBUG: FLASK_HOST_PORT_SEQ (${DOCKER_PROJECT_NAME_SEQ}) detectado: ${FLASK_HOST_PORT_SEQ}"
+                        echo "DEBUG: WIREMOCK_HOST_PORT_SEQ (${DOCKER_PROJECT_NAME_SEQ}) detectado: ${WIREMOCK_HOST_PORT_SEQ}"
 
                         def flaskUrlForTestSeq = "http://host.docker.internal:${FLASK_HOST_PORT_SEQ}"
                         def wiremockUrlForTestSeq = "http://host.docker.internal:${WIREMOCK_HOST_PORT_SEQ}"
@@ -106,8 +108,8 @@ pipeline {
                         
                         echo 'Pruebas de servicio secuencial ejecutadas con éxito.'
                     } finally {
-                        echo 'Deteniendo y eliminando contenedores de prueba (service secuencial) para un workspace limpio...'
-                        sh 'docker compose -f docker-compose.yml down --volumes --remove-orphans || true'
+                        echo "Deteniendo y eliminando contenedores de prueba (service secuencial) para proyecto: ${DOCKER_PROJECT_NAME_SEQ}"
+                        sh "docker compose -p \"${DOCKER_PROJECT_NAME_SEQ}\" -f docker-compose.yml down --volumes --remove-orphans || true"
                     }
                 }
                 echo 'Guardando reportes de pruebas de servicio secuenciales...'
@@ -129,29 +131,27 @@ pipeline {
                             cleanWs()
                             unstash name: 'sourceAndConfig'
                             sh 'ls -la'
-                            def DOCKER_PROJECT_NAME = "p-${UUID.randomUUID().toString()}"
+                            def DOCKER_PROJECT_NAME = "p-unit-${UUID.randomUUID().toString().replaceAll('-', '').take(10)}"
                             try {
                                 echo 'Creando directorio para reportes (si no existe)...'
                                 sh 'mkdir -p reports'
 
-                                echo 'Limpiando entorno Docker en caso de ser necesario...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
+                                echo "Limpiando entorno Docker para proyecto unitario paralelo: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml down --volumes --remove-orphans || true"
 
-                                echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service"
+                                echo "Construyendo entorno para proyecto unitario paralelo: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml up -d --build python-app wiremock_service"
 
                                 echo 'Realizando pruebas unitarias en paralelo...'
                                 sh 'python3 -m pytest test/unit --junitxml=reports/TEST-unit-parallel.xml' 
                                 
                                 echo 'Pruebas unitarias realizadas con exito...'
-                                echo 'Guardando reportes de pruebas unitarias en paralelo...'
+                                stash name: 'unitTestReportsPar', includes: 'reports/TEST-unit-parallel.xml', allowEmpty: true
                             } finally {
-                                echo 'Deteniendo y eliminando contenedores de prueba (service parallel) para un workspace limpio...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
+                                echo "Deteniendo y eliminando contenedores de prueba (unitario paralelo) para proyecto: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml down --volumes --remove-orphans || true"
                             }
                         }
-
-                        stash name: 'unitTestReportsPar', includes: 'reports/TEST-unit-parallel.xml', allowEmpty: true
                     }
                 }
                 stage('4.2 Pruebas de servicio (Paralelo con aislamiento)') {
@@ -171,19 +171,19 @@ pipeline {
                             echo 'Iniciando pruebas de servicio en paralelo'
                             def FLASK_HOST_PORT_PAR = ''
                             def WIREMOCK_HOST_PORT_PAR = ''
-                            def DOCKER_PROJECT_NAME = "p-${UUID.randomUUID().toString()}"
+                            def DOCKER_PROJECT_NAME = "p-rest-${UUID.randomUUID().toString().replaceAll('-', '').take(10)}"
                             try {
-                                echo 'Limpiando entorno Docker en caso de ser necesario...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
+                                echo "Limpiando entorno Docker para proyecto de servicio paralelo: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml down --volumes --remove-orphans || true"
 
-                                echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service"
+                                echo "Construyendo entorno para proyecto de servicio paralelo: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml up -d --build python-app wiremock_service"
 
-                                FLASK_HOST_PORT_PAR = sh(script: 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml port python-app 5000', returnStdout: true).trim().split(':')[1]
-                                WIREMOCK_HOST_PORT_PAR = sh(script: 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml port wiremock_service 8080', returnStdout: true).trim().split(':')[1]
+                                FLASK_HOST_PORT_PAR = sh(script: "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml port python-app 5000", returnStdout: true).trim().split(':')[1]
+                                WIREMOCK_HOST_PORT_PAR = sh(script: "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml port wiremock_service 8080", returnStdout: true).trim().split(':')[1]
                                 
-                                echo "DEBUG: FLASK_HOST_PORT_PAR detectado: ${FLASK_HOST_PORT_PAR}"
-                                echo "DEBUG: WIREMOCK_HOST_PORT_PAR detectado: ${WIREMOCK_HOST_PORT_PAR}"
+                                echo "DEBUG: FLASK_HOST_PORT_PAR (${DOCKER_PROJECT_NAME}) detectado: ${FLASK_HOST_PORT_PAR}"
+                                echo "DEBUG: WIREMOCK_HOST_PORT_PAR (${DOCKER_PROJECT_NAME}) detectado: ${WIREMOCK_HOST_PORT_PAR}"
 
                                 def flaskUrlForTestPar = "http://host.docker.internal:${FLASK_HOST_PORT_PAR}"
                                 def wiremockUrlForTestPar = "http://host.docker.internal:${WIREMOCK_HOST_PORT_PAR}"
@@ -191,7 +191,7 @@ pipeline {
                                 echo 'Creando directorio para reportes (si no existe)...'
                                 sh 'mkdir -p reports'
                                 
-                                echo 'Ejecutando pruebas de servicio (Parallel)...'
+                                echo "Ejecutando pruebas de servicio (Parallel) para proyecto: ${DOCKER_PROJECT_NAME}"
                                 echo "DEBUG: (Paralelo) Intentando curl a python-app en ${flaskUrlForTestPar}/calc/add/1/2"
                                 sh "curl -v --connect-timeout 15 ${flaskUrlForTestPar}/calc/add/1/2 || echo '(Paralelo) Curl a python-app falló'"
 
@@ -204,13 +204,12 @@ pipeline {
                                     python3 -m pytest test/rest --junitxml=reports/TEST-rest-parallel.xml
                                 """
                                 echo 'Pruebas de servicio en paralelo ejecutadas con éxito.'
+                                stash name: 'serviceTestReportsPar', includes: 'reports/TEST-rest-parallel.xml', allowEmpty: true
                             } finally {
-                                echo 'Deteniendo y eliminando contenedores de prueba (service parallel) para un workspace limpio...'
-                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
+                                echo "Deteniendo y eliminando contenedores de prueba (service parallel) para proyecto: ${DOCKER_PROJECT_NAME}"
+                                sh "docker compose -p \"${DOCKER_PROJECT_NAME}\" -f docker-compose.yml down --volumes --remove-orphans || true"
                             }
                         }
-                        echo 'Guardando reportes de pruebas de servicio en paralelo...'
-                        stash name: 'serviceTestReportsPar', includes: 'reports/TEST-rest-parallel.xml', allowEmpty: true
                     }
                 }
             }
@@ -222,10 +221,27 @@ pipeline {
                 echo 'Fin del Pipeline. Recopilando todos los reportes...'
                 sh 'mkdir -p reports' 
                 
-                unstash name: 'unitTestReportsSeq'
-                unstash name: 'serviceTestReportsSeq'
-                unstash name: 'unitTestReportsPar'
-                unstash name: 'serviceTestReportsPar'
+
+                try {
+                    unstash name: 'unitTestReportsSeq'
+                } catch (e) {
+                    echo "Advertencia: No se pudo recuperar el stash 'unitTestReportsSeq'. Razón: ${e.getMessage()}"
+                }
+                try {
+                    unstash name: 'serviceTestReportsSeq'
+                } catch (e) {
+                    echo "Advertencia: No se pudo recuperar el stash 'serviceTestReportsSeq'. Razón: ${e.getMessage()}"
+                }
+                try {
+                    unstash name: 'unitTestReportsPar'
+                } catch (e) {
+                    echo "Advertencia: No se pudo recuperar el stash 'unitTestReportsPar'. Razón: ${e.getMessage()}"
+                }
+                try {
+                    unstash name: 'serviceTestReportsPar'
+                } catch (e) {
+                    echo "Advertencia: No se pudo recuperar el stash 'serviceTestReportsPar'. Razón: ${e.getMessage()}"
+                }
                 
                 archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
             }
