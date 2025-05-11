@@ -119,7 +119,7 @@ pipeline {
             parallel {
                 stage('4.1 Pruebas unitarias (Paralelo)') {
                     agent {
-                        label 'agent-ssh-jenkins-2-test-unit' 
+                        label 'agent-ssh-jenkins-2-test-rest' // Usamos el mismo agente en las dos stages
                     }
                     steps {
                         sh 'whoami'
@@ -142,7 +142,7 @@ pipeline {
                 }
                 stage('4.2 Pruebas de servicio (Paralelo con aislamiento)') {
                     agent {
-                        label 'agent-ssh-jenkins-2-test-rest' 
+                        label 'agent-ssh-jenkins-2-test-rest' // Usamos el mismo agente en las dos stages
                     }
                     steps {
                         script {
