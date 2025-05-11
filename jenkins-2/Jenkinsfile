@@ -179,13 +179,8 @@ pipeline {
                                 echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
                                 sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service"
 
-                                echo 'Esperando a que los servicios se inicien...'
-                                sh 'docker compose -f docker-compose.yml logs python-app'
-                                sh 'docker compose -f docker-compose.yml exec python-app env'
-                                sh 'docker compose -f docker-compose.yml logs wiremock_service'
-
-                                FLASK_HOST_PORT_PAR = sh(script: 'docker compose -f docker-compose.yml port python-app 5000', returnStdout: true).trim().split(':')[1]
-                                WIREMOCK_HOST_PORT_PAR = sh(script: 'docker compose -f docker-compose.yml port wiremock_service 8080', returnStdout: true).trim().split(':')[1]
+                                FLASK_HOST_PORT_PAR = sh(script: 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml port python-app 5000', returnStdout: true).trim().split(':')[1]
+                                WIREMOCK_HOST_PORT_PAR = sh(script: 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml port wiremock_service 8080', returnStdout: true).trim().split(':')[1]
                                 
                                 echo "DEBUG: FLASK_HOST_PORT_PAR detectado: ${FLASK_HOST_PORT_PAR}"
                                 echo "DEBUG: WIREMOCK_HOST_PORT_PAR detectado: ${WIREMOCK_HOST_PORT_PAR}"
