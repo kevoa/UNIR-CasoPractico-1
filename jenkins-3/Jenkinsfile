@@ -75,7 +75,7 @@ pipeline {
                         sh 'docker compose -f docker-compose.yml up -d --build python-app wiremock_service'
 
                         echo 'Esperando a que los servicios se inicien...'
-                        sh 'sleep 10' 
+                        sh 'sleep 5' 
                         sh 'docker compose -f docker-compose.yml logs python-app' 
                         sh 'docker compose -f docker-compose.yml exec python-app env'
                         sh 'docker compose -f docker-compose.yml logs wiremock_service'
@@ -165,7 +165,7 @@ pipeline {
                                 sh 'docker compose -f docker-compose.yml up -d --build python-app wiremock_service'
 
                                 echo 'Esperando a que los servicios se inicien...'
-                                sh 'sleep 25' 
+                                sh 'sleep 5' 
                                 sh 'docker compose -f docker-compose.yml logs python-app'
                                 sh 'docker compose -f docker-compose.yml exec python-app env'
                                 sh 'docker compose -f docker-compose.yml logs wiremock_service'
