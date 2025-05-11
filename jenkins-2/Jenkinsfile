@@ -135,10 +135,10 @@ pipeline {
                                 sh 'mkdir -p reports'
 
                                 echo 'Limpiando entorno Docker en caso de ser necesario...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
 
                                 echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service"
 
                                 echo 'Realizando pruebas unitarias en paralelo...'
                                 sh 'python3 -m pytest test/unit --junitxml=reports/TEST-unit-parallel.xml' 
@@ -147,7 +147,7 @@ pipeline {
                                 echo 'Guardando reportes de pruebas unitarias en paralelo...'
                             } finally {
                                 echo 'Deteniendo y eliminando contenedores de prueba (service parallel) para un workspace limpio...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
                             }
                         }
 
@@ -174,10 +174,10 @@ pipeline {
                             def DOCKER_PROJECT_NAME = "mi_proyecto_ci"
                             try {
                                 echo 'Limpiando entorno Docker en caso de ser necesario...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
 
                                 echo 'Construyendo entorno para pruebas python-app y wiremock (CON PUBLICACIÓN DE PUERTOS)...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml up -d --build python-app wiremock_service"
 
                                 echo 'Esperando a que los servicios se inicien...'
                                 sh 'docker compose -f docker-compose.yml logs python-app'
@@ -211,7 +211,7 @@ pipeline {
                                 echo 'Pruebas de servicio en paralelo ejecutadas con éxito.'
                             } finally {
                                 echo 'Deteniendo y eliminando contenedores de prueba (service parallel) para un workspace limpio...'
-                                sh 'docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true'
+                                sh "docker compose -p ${DOCKER_PROJECT_NAME} -f docker-compose.yml down --volumes --remove-orphans || true"
                             }
                         }
                         echo 'Guardando reportes de pruebas de servicio en paralelo...'
